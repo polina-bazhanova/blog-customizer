@@ -16,7 +16,7 @@ import {
 	defaultArticleState,
 } from 'src/constants/articleProps';
 
-import { useRef, useState, FormEvent, SyntheticEvent } from 'react';
+import { useRef, useState, FormEvent, useEffect, SyntheticEvent } from 'react';
 import styles from './ArticleParamsForm.module.scss';
 import clsx from 'clsx';
 
@@ -33,22 +33,22 @@ export const ArticleParamsForm = ({
 	onClose,
 	onApply,
 }: ArticleParamsFormProps) => {
-	const ref = useRef<HTMLFormElement | null>(null);
-	const [isOpen, setIsOpen] = useState(initialState);
+	const formRef = useRef<HTMLFormElement | null>(null);
+	const [isFormOpen, setIsFormOpen] = useState(initialState);
 	const [formState, setFormState] =
 		useState<ArticleStateType>(defaultArticleState);
 
-	const open = () => {
-		setIsOpen(true);
+	const openForm = () => {
+		setIsFormOpen(true);
 		onOpen?.();
 	};
 
-	const close = () => {
-		setIsOpen(false);
+	const closeForm = () => {
+		setIsFormOpen(false);
 		onClose?.();
 	};
 
-	const toggle = () => (isOpen ? close() : open());
+	const toggleForm = () => (isFormOpen ? closeForm() : openForm());
 
 	const handleChange = (selected: OptionType, key: keyof ArticleStateType) => {
 		setFormState((prevState) => ({
@@ -65,18 +65,36 @@ export const ArticleParamsForm = ({
 	const handleReset = (e: SyntheticEvent) => {
 		e.preventDefault();
 		setFormState(defaultArticleState);
+		onApply?.(defaultArticleState);
 	};
+
+	useEffect(() => {
+		if (!isFormOpen) return;
+
+		const handleClickOutside = (event: MouseEvent) => {
+			if (formRef.current && !formRef.current.contains(event.target as Node)) {
+				closeForm();
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [isFormOpen]);
 
 	return (
 		<>
-			<ArrowButton isOpen={isOpen} onClick={toggle} />
+			<ArrowButton isOpen={isFormOpen} onClick={toggleForm} />
 			<aside
-				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
+				className={clsx(styles.container, {
+					[styles.container_open]: isFormOpen,
+				})}>
 				<form
 					className={styles.form}
 					onSubmit={handleSubmit}
 					onReset={handleReset}
-					ref={ref}>
+					ref={formRef}>
 					<Text family='open-sans' weight={800} uppercase size={31}>
 						Задайте параметры
 					</Text>
